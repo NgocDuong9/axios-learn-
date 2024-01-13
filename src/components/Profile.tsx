@@ -58,6 +58,12 @@ const Profile = () => {
     fetchData();
   }, [accessToken, navigate, refreshToken]);
 
+  const handleLogout = () => {
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("access_token");
+    navigate("/");
+  };
+
   return (
     <div>
       <h2>Profile</h2>
@@ -67,6 +73,13 @@ const Profile = () => {
           <h3>SDT: {profile.phone}</h3>
         </>
       )}
+
+      <button
+        style={{ padding: "20px", background: "red" }}
+        onClick={handleLogout}
+      >
+        Log out
+      </button>
     </div>
   );
 };
