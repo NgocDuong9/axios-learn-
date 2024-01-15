@@ -10,7 +10,6 @@ interface ProfileData {
 const Profile = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const accessToken = localStorage.getItem("access_token");
   const refreshToken = localStorage.getItem("refresh_token");
 
   if (!refreshToken) {
@@ -19,45 +18,71 @@ const Profile = () => {
 
   const refreshAccessToken = async () => {
     try {
-      const refreshToken = localStorage.getItem("refresh_token");
+      if (!refreshToken) {
+        navigate("/");
+        return;
+      }
       const response = await axios.post(
         "https://api-v2.sucosun.com/api/user/refresh-token",
         { refreshToken }
       );
-
       const newAccessToken = response.data.data;
       localStorage.setItem("access_token", newAccessToken);
-      console.log(newAccessToken, "newAccessToken");
-
+      // console.log(newAccessToken, "newAccessToken");
       return;
     } catch (error) {
       navigate("/");
-      return null;
+      return;
+    }
+  };
+
+  const getProfile = async () => {
+    const accessToken = localStorage.getItem("access_token");
+    try {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+      const response = await axios.get(
+        "https://api-v2.sucosun.com/api/user/profile"
+      );
+      setProfile(response.data.data);
+      return;
+    } catch (error) {
+      return;
+    }
+  };
+
+  const fetchData = async () => {
+    const accessToken = localStorage.getItem("access_token");
+
+    try {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+      const response = await axios.get(
+        "https://api-v2.sucosun.com/api/user/profile"
+      );
+      setProfile(response.data.data);
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        try {
+          await refreshAccessToken();
+          const newAccessToken = localStorage.getItem("access_token");
+          if (newAccessToken) {
+            axios.defaults.headers.common[
+              "Authorization"
+            ] = `Bearer ${newAccessToken}`;
+            await getProfile();
+          } else {
+            navigate("/");
+          }
+        } catch (refreshError) {
+          navigate("/");
+        }
+      } else {
+      }
     }
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!accessToken) {
-        navigate("/");
-        return;
-      }
-
-      await refreshAccessToken();
-      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-      try {
-        const response = await axios.get(
-          "https://api-v2.sucosun.com/api/user/profile"
-        );
-        setProfile(response.data.data);
-      } catch (error) {
-        navigate("/");
-      }
-    };
-
     fetchData();
-  }, [accessToken, navigate, refreshToken]);
-
+  }, []);
   const handleLogout = () => {
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("access_token");
